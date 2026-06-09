@@ -313,14 +313,17 @@
 </div>
 
 <script>
-// --- EmailJS キー設定 ---
+// ==========================================
+// ⚠️ 重要：ここにコピーした値を正確に貼り付けてください
+// ==========================================
 const EMAILJS_CONFIG = {
-    PUBLIC_KEY: "",     // DPvgnwbxsHrBrCbQr
-    SERVICE_ID: "",     // service_btl6txb
-    TEMPLATE_ID: ""     // template_67jxxf9
+    PUBLIC_KEY: "DPvgnwbxsHrBrCbQr",     
+    SERVICE_ID: "service_btl6txb",     
+    TEMPLATE_ID: "template_67jxxf9"     
 };
 
-if (EMAILJS_CONFIG.PUBLIC_KEY) {
+// EmailJSの初期化
+if (EMAILJS_CONFIG.PUBLIC_KEY && !EMAILJS_CONFIG.PUBLIC_KEY.includes("ここに")) {
     emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
 }
 
@@ -440,9 +443,10 @@ class AuthManager {
 
         } else if (this.mode === 'otp_verify') {
             this.title.innerText = "VERIFY EMAIL";
-            this.subtitle.innerText = `${this.pendingUser.email}<br>宛てに確認コードを送信しました。入力してください。`;
+            // <br>タグがテキスト表示されないようにinnerHTMLに変更
+            this.subtitle.innerHTML = `${this.pendingUser.email}<br>宛てに確認コードを送信しました。入力してください。`;
             this.submitBtn.innerText = "COMPLETE REGISTRATION";
-            this.toggleWrapper.innerHTML = `<span id="auth-back-btn">← メールアドレス入力に戻る</span>`;
+            this.toggleWrapper.innerHTML = `<span><span id="auth-back-btn" style="color:var(--accent-color); cursor:pointer; text-decoration:underline;">← メールアドレス入力に戻る</span></span>`;
             
             this.inputsContainer.innerHTML = `
                 <div class="input-group">
@@ -518,7 +522,14 @@ class AuthManager {
         this.submitBtn.innerText = "SENDING...";
         this.submitBtn.disabled = true;
 
-        if (EMAILJS_CONFIG.PUBLIC_KEY && EMAILJS_CONFIG.SERVICE_ID && EMAILJS_CONFIG.TEMPLATE_ID) {
+        const hasConfig = EMAILJS_CONFIG.PUBLIC_KEY && 
+                          !EMAILJS_CONFIG.PUBLIC_KEY.includes("ここに") &&
+                          EMAILJS_CONFIG.SERVICE_ID && 
+                          !EMAILJS_CONFIG.SERVICE_ID.includes("ここに") &&
+                          EMAILJS_CONFIG.TEMPLATE_ID && 
+                          !EMAILJS_CONFIG.TEMPLATE_ID.includes("ここに");
+
+        if (hasConfig) {
             emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
                 to_email: email,
                 otp_code: code
@@ -526,12 +537,12 @@ class AuthManager {
                 this.proceedToOtp();
             }).catch((err) => {
                 console.error("EmailJS Error:", err);
-                this.showError("メールの送信に失敗しました。キー設定を確認してください。");
+                this.showError("メールの送信に失敗しました。EmailJSの管理画面でServiceの状態やTemplateの変数名（{{to_email}}, {{otp_code}}）が正しいかご確認ください。");
                 this.submitBtn.innerText = "SEND VERIFICATION CODE";
                 this.submitBtn.disabled = false;
             });
         } else {
-            this.showError("<span style='color:#ffa502;'>EmailJSのキーが設定されていません。<br>コードの一番上にある EMAILJS_CONFIG にキーを設定してください。</span>");
+            this.showError("<span style='color:#ffa502;'>EmailJSのキーが正しく設定されていません。<br>コードの125行目付近にある「EMAILJS_CONFIG」に正しいキーを入力し、保存してから再度お試しください。</span>");
             this.submitBtn.innerText = "SEND VERIFICATION CODE";
             this.submitBtn.disabled = false;
         }
