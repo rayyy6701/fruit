@@ -323,7 +323,7 @@ const EMAILJS_CONFIG = {
 };
 
 // EmailJSの初期化
-if (EMAILJS_CONFIG.PUBLIC_KEY && !EMAILJS_CONFIG.PUBLIC_KEY.includes("ここに")) {
+if (EMAILJS_CONFIG.PUBLIC_KEY) {
     emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
 }
 
