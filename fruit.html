@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suika Casual Puzzle - Premium Edition</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text-color: #ffffff;
+            --accent-color: #ff4757;
+            --success-color: #2ed573;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- 認証画面 (ログイン/登録) --- */
+        #auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 15, 15, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            transition: opacity 0.4s ease;
+        }
+
+        .auth-card {
+            background: #222;
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid #3d3d3d;
+            width: 360px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            text-align: center;
+        }
+
+        .auth-card h2 {
+            font-size: 28px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .auth-subtitle {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #aaa;
+            margin-bottom: 5px;
+            padding-left: 5px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            background: #111;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .auth-btn {
+            width: 100%;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .auth-btn:hover { background: #ff6b81; }
+        .auth-btn:active { transform: scale(0.98); }
+
+        .auth-toggle-text {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .auth-toggle-text span {
+            color: var(--accent-color);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        #auth-error {
+            color: #ff4757;
+            font-size: 13px;
+            margin-top: 10px;
+            min-height: 18px;
+        }
+
+        /* --- ゲームメイン画面 --- */
+        #game-container {
+            position: relative;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: var(--container-bg);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #game-container.show {
+            opacity: 1;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 450px;
+            height: 650px;
+            background: #111;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 4px solid #333;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 160px;
+        }
+
+        .ui-box {
+            background: #222;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border: 2px solid #3d3d3d;
+            margin-bottom: 15px;
+        }
+
+        .ui-user-box {
+            border-color: var(--success-color);
+        }
+
+        .ui-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .ui-value {
+            font-size: 24px;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #username-display {
+            font-size: 18px;
+            color: var(--success-color);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .logout-link {
+            font-size: 11px;
+            color: #888;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        .logout-link:hover { color: #fff; }
+
+        #next-canvas {
+            background: #111;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: block;
+        }
+
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        #game-over-screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #game-over-screen h2 {
+            font-size: 36px;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .restart-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .restart-btn:hover {
+            background: #ff6b81;
+            transform: scale(1.05);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+</head>
+<body>
+
+<div id="auth-overlay">
+    <div class="auth-card">
+        <h2 id="auth-title">LOGIN</h2>
+        <div id="auth-subtitle" class="auth-subtitle">Welcome back! Please login.</div>
+        
+        <div class="input-group">
+            <label for="auth-username">Username</label>
+            <input type="text" id="auth-username" autocomplete="username" placeholder="ユーザー名を入力">
+        </div>
+        <div class="input-group">
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" autocomplete="current-password" placeholder="パスワードを入力">
+        </div>
+
+        <button class="auth-btn" id="auth-submit-btn">SIGN IN</button>
+        
+        <div class="auth-toggle-text" id="auth-toggle-wrapper">
+            アカウントをお持ちでないですか？ <span id="auth-toggle-btn">新規登録</span>
+        </div>
+        <div id="auth-error"></div>
+    </div>
+</div>
+
+<div id="game-container">
+    <div class="canvas-wrapper">
+        <canvas id="game-canvas" width="450" height="650"></canvas>
+        
+        <div id="game-over-screen">
+            <h2>GAME OVER</h2>
+            <div class="ui-label">Final Score</div>
+            <div id="final-score" class="ui-value" style="color: #ffd32a;">0</div>
+            <button class="restart-btn" id="restart-btn">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div>
+            <div class="ui-box ui-user-box">
+                <div class="ui-label">Player</div>
+                <div id="username-display" class="ui-value">Guest</div>
+                <span class="logout-link" id="logout-btn">ログアウト</span>
+            </div>
+            <div class="ui-box">
+                <div class="ui-label">Score</div>
+                <div id="score" class="ui-value">0</div>
+            </div>
+            <div class="ui-box">
+                <div class="ui-label">Best</div>
+                <div id="best-score" class="ui-value">0</div>
+            </div>
+        </div>
+        
+        <div class="ui-box">
+            <div class="ui-label">Next</div>
+            <canvas id="next-canvas" width="120" height="120"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- ゲーム設定と定数定義 ---
+const GAME_CONFIG = {
+    WIDTH: 450,
+    HEIGHT: 650,
+    BOX_Y: 120,          
+    DROP_Y: 60,          
+    MAX_DROP_INDEX: 4,   
+    DEADLINE_Y: 130,     
+    GAME_OVER_DELAY: 3000 
+};
+
+const FRUIT_DEFINITIONS = [
+    { name: "さくらんぼ", radius: 16,  score: 1,   colors: ["#ff4d4d", "#c01212"], feature: "cherry" },
+    { name: "いちご",     radius: 23,  score: 3,   colors: ["#ff4757", "#ff6b81"], feature: "strawberry" },
+    { name: "ぶどう",     radius: 31,  score: 6,   colors: ["#9b59b6", "#8e44ad"], feature: "grapes" },
+    { name: "デコポン",   radius: 39,  score: 10,  colors: ["#ffa502", "#ff7f50"], feature: "decopon" },
+    { name: "かき",       radius: 49,  score: 15,  colors: ["#ff7f50", "#d35400"], feature: "persimmon" },
+    { name: "りんご",     radius: 59,  score: 21,  colors: ["#ff6b6b", "#ee5253"], feature: "apple" },
+    { name: "なし",       radius: 69,  score: 28,  colors: ["#f1c40f", "#f39c12"], feature: "pear" },
+    { name: "もも",       radius: 80,  score: 36,  colors: ["#ffb8b8", "#ff9ff3"], feature: "peach" },
+    { name: "パイナップル",radius: 94,  score: 45,  colors: ["#fbc531", "#e1b12c"], feature: "pineapple" },
+    { name: "メロン",     radius: 110, score: 55,  colors: ["#2ecc71", "#27ae60"], feature: "melon" },
+    { name: "スイカ",     radius: 126, score: 66,  colors: ["#26de81", "#20bf6b"], feature: "watermelon" }
+];
+
+// --- セキュリティ用簡易ハッシュ関数 (文字列をハッシュ化) ---
+function cyrb128(str) {
+    let h1 = 1779033703, h2 = 3024733165, h3 = 3362453663, h4 = 502494325;
+    for (let i = 0, k; i < str.length; i++) {
+        k = str.charCodeAt(i);
+        h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+        h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+        h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+        h4 = h1 ^ Math.imul(h4 ^ k, 271604417);
+    }
+    h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+    h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+    h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+    h4 = Math.imul(h2 ^ (h4 >>> 19), 271604417);
+    return [(h1^h2^h3^h4)>>>0, (h2^h1)>>>0, (h3^h1)>>>0, (h4^h1)>>>0].join('-');
+}
+
+// --- 認証システム・マネージャー ---
+class AuthManager {
+    constructor(onSuccessCallback) {
+        this.onSuccess = onSuccessCallback;
+        this.isLoginMode = true; // true: ログイン, false: 新規登録
+
+        this.overlay = document.getElementById("auth-overlay");
+        this.title = document.getElementById("auth-title");
+        this.subtitle = document.getElementById("auth-subtitle");
+        this.usernameInput = document.getElementById("auth-username");
+        this.passwordInput = document.getElementById("auth-password");
+        this.submitBtn = document.getElementById("auth-submit-btn");
+        this.toggleBtn = document.getElementById("auth-toggle-btn");
+        this.toggleWrapper = document.getElementById("auth-toggle-wrapper");
+        this.errorEl = document.getElementById("auth-error");
+
+        this.initEvents();
+        this.checkAutoLogin();
+    }
+
+    initEvents() {
+        this.toggleBtn.addEventListener("click", () => this.toggleMode());
+        this.submitBtn.addEventListener("click", () => this.handleSubmit());
+        // Enterキーで送信対応
+        const checkEnter = (e) => { if(e.key === "Enter") this.handleSubmit(); };
+        this.usernameInput.addEventListener("keydown", checkEnter);
+        this.passwordInput.addEventListener("keydown", checkEnter);
+    }
+
+    checkAutoLogin() {
+        const sessionUser = sessionStorage.getItem("suika_current_user");
+        if (sessionUser) {
+            this.completeAuth(sessionUser);
+        }
+    }
+
+    toggleMode() {
+        this.isLoginMode = !this.isLoginMode;
+        this.errorEl.innerText = "";
+        this.passwordInput.value = "";
+        
+        if (this.isLoginMode) {
+            this.title.innerText = "LOGIN";
+            this.subtitle.innerText = "Welcome back! Please login.";
+            this.submitBtn.innerText = "SIGN IN";
+            this.toggleWrapper.innerHTML = `アカウントをお持ちでないですか？ <span id="auth-toggle-btn">新規登録</span>`;
+        } else {
+            this.title.innerText = "REGISTER";
+            this.subtitle.innerText = "Create a new account for saving scores.";
+            this.submitBtn.innerText = "SIGN UP";
+            this.toggleWrapper.innerHTML = `既にアカウントをお持ちですか？ <span id="auth-toggle-btn">ログイン</span>`;
+        }
+        // 内側を入れ替えたため再バインド
+        this.toggleBtn = document.getElementById("auth-toggle-btn");
+        this.toggleBtn.addEventListener("click", () => this.toggleMode());
+    }
+
+    handleSubmit() {
+        const username = this.usernameInput.value.trim();
+        const password = this.passwordInput.value.trim();
+        this.errorEl.innerText = "";
+
+        if (!username || !password) {
+            this.errorEl.innerText = "全てのフィールドを入力してください。";
+            return;
+        }
+
+        let users = JSON.parse(localStorage.getItem("suika_users")) || {};
+        const hashedPassword = cyrb128(password);
+
+        if (this.isLoginMode) {
+            // ログイン処理
+            if (users[username] && users[username].password === hashedPassword) {
+                this.completeAuth(username);
+            } else {
+                this.errorEl.innerText = "ユーザー名またはパスワードが違います。";
+            }
+        } else {
+            // 新規登録処理
+            if (users[username]) {
+                this.errorEl.innerText = "このユーザー名は既に存在します。";
+            } else {
+                users[username] = {
+                    password: hashedPassword,
+                    bestScore: 0
+                };
+                localStorage.setItem("suika_users", JSON.stringify(users));
+                this.completeAuth(username);
+            }
+        }
+    }
+
+    completeAuth(username) {
+        sessionStorage.setItem("suika_current_user", username);
+        this.overlay.style.opacity = "0";
+        setTimeout(() => {
+            this.overlay.style.display = "none";
+            this.onSuccess(username);
+        }, 400);
+    }
+
+    static logout() {
+        sessionStorage.removeItem("suika_current_user");
+        location.reload();
+    }
+}
+
+// --- ゲームコアクラス ---
+class SuikaGame {
+    constructor(username) {
+        this.username = username;
+        document.getElementById("username-display").innerText = username;
+
+        this.Engine = Matter.Engine;
+        this.Runner = Matter.Runner;
+        this.Bodies = Matter.Bodies;
+        this.Composite = Matter.Composite;
+        this.Body = Matter.Body;
+        this.Events = Matter.Events;
+
+        this.canvas = document.getElementById("game-canvas");
+        this.ctx = this.canvas.getContext("2d");
+        this.nextCanvas = document.getElementById("next-canvas");
+        this.nextCtx = this.nextCanvas.getContext("2d");
+
+        this.scoreEl = document.getElementById("score");
+        this.bestScoreEl = document.getElementById("best-score");
+        this.finalScoreEl = document.getElementById("final-score");
+        this.gameOverScreen = document.getElementById("game-over-screen");
+
+        this.score = 0;
+        
+        // アカウントに紐づくハイスコアを取得
+        this.loadUserBestScore();
+
+        this.currentFruitIndex = this.getRandomFruitIndex();
+        this.nextFruitIndex = this.getRandomFruitIndex();
+        
+        this.currentX = GAME_CONFIG.WIDTH / 2;
+        this.isReadyToDrop = true;
+        this.isGameOver = false;
+        
+        this.particles = [];       
+        this.popTexts = [];        
+        this.fruitsToMerge = [];   
+        this.deadTimerStart = null; 
+
+        document.getElementById("game-container").classList.add("show");
+
+        this.initPhysics();
+        this.initEvents();
+        this.loop();
+    }
+
+    loadUserBestScore() {
+        let users = JSON.parse(localStorage.getItem("suika_users")) || {};
+        if (users[this.username]) {
+            this.bestScore = users[this.username].bestScore || 0;
+        } else {
+            this.bestScore = 0;
+        }
+        this.bestScoreEl.innerText = this.bestScore;
+    }
+
+    saveUserBestScore() {
+        let users = JSON.parse(localStorage.getItem("suika_users")) || {};
+        if (users[this.username]) {
+            users[this.username].bestScore = this.bestScore;
+            localStorage.setItem("suika_users", JSON.stringify(users));
+        }
+    }
+
+    initPhysics() {
+        this.engine = this.Engine.create({
+            constraintIterations: 10, 
+            positionIterations: 10,
+            velocityIterations: 10
+        });
+        this.engine.gravity.y = 1.2; 
+        
+        const wallThickness = 100;
+        const wallOptions = { isStatic: true, friction: 0.2, restitution: 0.1 };
+        
+        this.floor = this.Bodies.rectangle(GAME_CONFIG.WIDTH / 2, GAME_CONFIG.HEIGHT + wallThickness/2, GAME_CONFIG.WIDTH, wallThickness, wallOptions);
+        this.leftWall = this.Bodies.rectangle(-wallThickness/2, GAME_CONFIG.HEIGHT / 2, wallThickness, GAME_CONFIG.HEIGHT, wallOptions);
+        this.rightWall = this.Bodies.rectangle(GAME_CONFIG.WIDTH + wallThickness/2, GAME_CONFIG.HEIGHT / 2, wallThickness, GAME_CONFIG.HEIGHT, wallOptions);
+
+        this.Composite.add(this.engine.world, [this.floor, this.leftWall, this.rightWall]);
+        this.runner = this.Runner.create();
+        this.Runner.run(this.runner, this.engine);
+    }
+
+    initEvents() {
+        const updateX = (e) => {
+            if (!this.isReadyToDrop || this.isGameOver) return;
+            const rect = this.canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let x = clientX - rect.left;
+            
+            const radius = FRUIT_DEFINITIONS[this.currentFruitIndex].radius;
+            this.currentX = Math.max(radius + 5, Math.min(GAME_CONFIG.WIDTH - radius - 5, x));
+        };
+
+        this.canvas.addEventListener("mousemove", updateX);
+        this.canvas.addEventListener("touchmove", (e) => { updateX(e); e.preventDefault(); }, { passive: false });
+
+        const dropAction = () => {
+            if (!this.isReadyToDrop || this.isGameOver) return;
+            this.dropFruit();
+        };
+
+        this.canvas.addEventListener("click", dropAction);
+        this.canvas.addEventListener("touchend", dropAction);
+
+        this.Events.on(this.engine, "collisionStart", (event) => {
+            event.pairs.forEach((pair) => {
+                const bodyA = pair.bodyA;
+                const bodyB = pair.bodyB;
+
+                if (bodyA.fruitIndex !== undefined && bodyB.fruitIndex !== undefined) {
+                    if (bodyA.fruitIndex === bodyB.fruitIndex && !bodyA.isDead && !bodyB.isDead) {
+                        const alreadyQueued = this.fruitsToMerge.some(m => 
+                            m.bodyA.id === bodyA.id || m.bodyB.id === bodyA.id ||
+                            m.bodyA.id === bodyB.id || m.bodyB.id === bodyB.id
+                        );
+                        if (!alreadyQueued) {
+                            this.fruitsToMerge.push({ bodyA, bodyB });
+                        }
+                    }
+                }
+            });
+        });
+
+        document.getElementById("restart-btn").addEventListener("click", () => this.restart());
+        document.getElementById("logout-btn").addEventListener("click", () => AuthManager.logout());
+    }
+
+    getRandomFruitIndex() {
+        return Math.floor(Math.random() * (GAME_CONFIG.MAX_DROP_INDEX + 1));
+    }
+
+    dropFruit() {
+        this.isReadyToDrop = false;
+        const index = this.currentFruitIndex;
+        const def = FRUIT_DEFINITIONS[index];
+
+        const fruit = this.Bodies.circle(this.currentX, GAME_CONFIG.DROP_Y, def.radius, {
+            restitution: 0.1, 
+            friction: 0.1,    
+            density: 0.001,
+            label: "fruit"
+        });
+
+        fruit.fruitIndex = index;
+        fruit.isDead = false;
+        fruit.spawnTime = Date.now(); 
+
+        this.Composite.add(this.engine.world, fruit);
+
+        setTimeout(() => {
+            if (this.isGameOver) return;
+            this.currentFruitIndex = this.nextFruitIndex;
+            this.nextFruitIndex = this.getRandomFruitIndex();
+            this.isReadyToDrop = true;
+        }, 500); 
+    }
+
+    processMerges() {
+        if (this.fruitsToMerge.length === 0) return;
+
+        const merges = [...this.fruitsToMerge];
+        this.fruitsToMerge = [];
+
+        merges.forEach(({ bodyA, bodyB }) => {
+            if (bodyA.isDead || bodyB.isDead) return;
+            if (!this.Composite.allBodies(this.engine.world).includes(bodyA)) return;
+            if (!this.Composite.allBodies(this.engine.world).includes(bodyB)) return;
+
+            const currentIndex = bodyA.fruitIndex;
+            const nextIndex = currentIndex + 1;
+
+            bodyA.isDead = true;
+            bodyB.isDead = true;
+
+            const midX = (bodyA.position.x + bodyB.position.x) / 2;
+            const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+            this.Composite.remove(this.engine.world, bodyA);
+            this.Composite.remove(this.engine.world, bodyB);
+
+            const currentDef = FRUIT_DEFINITIONS[currentIndex];
+            this.addScore(currentDef.score, midX, midY);
+            this.createMergeParticles(midX, midY, currentDef.colors[0]);
+
+            if (nextIndex < FRUIT_DEFINITIONS.length) {
+                const nextDef = FRUIT_DEFINITIONS[nextIndex];
+                const newFruit = this.Bodies.circle(midX, midY, nextDef.radius, {
+                    restitution: 0.1,
+                    friction: 0.1,
+                    density: 0.001,
+                    label: "fruit"
+                });
+                newFruit.fruitIndex = nextIndex;
+                newFruit.isDead = false;
+                newFruit.spawnTime = Date.now();
+
+                this.Body.setVelocity(newFruit, { x: (Math.random() - 0.5) * 2, y: -2 });
+
+                this.Composite.add(this.engine.world, newFruit);
+            }
+        });
+    }
+
+    addScore(points, x, y) {
+        this.score += points;
+        this.scoreEl.innerText = this.score;
+        if (this.score > this.bestScore) {
+            this.bestScore = this.score;
+            this.bestScoreEl.innerText = this.bestScore;
+            this.saveUserBestScore(); // ハイスコアをユーザーデータに書き込み
+        }
+        this.popTexts.push({ x, y, text: `+${points}`, opacity: 1, life: 40 });
+    }
+
+    createMergeParticles(x, y, color) {
+        for (let i = 0; i < 12; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 4 + 2;
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: Math.random() * 4 + 2,
+                color,
+                opacity: 1,
+                life: 30
+            });
+        }
+    }
+
+    checkGameOver() {
+        const bodies = this.Composite.allBodies(this.engine.world);
+        let dynamicFruitAboveLine = false;
+        const now = Date.now();
+
+        bodies.forEach(body => {
+            if (body.label === "fruit" && !body.isDead) {
+                if (now - body.spawnTime < 1000) return;
+                if (body.position.y - body.circleRadius < GAME_CONFIG.DEADLINE_Y) {
+                    dynamicFruitAboveLine = true;
+                }
+            }
+        });
+
+        if (dynamicFruitAboveLine) {
+            if (this.deadTimerStart === null) {
+                this.deadTimerStart = now;
+            } else if (now - this.deadTimerStart > GAME_CONFIG.GAME_OVER_DELAY) {
+                this.triggerGameOver();
+            }
+        } else {
+            this.deadTimerStart = null; 
+        }
+    }
+
+    triggerGameOver() {
+        this.isGameOver = true;
+        this.finalScoreEl.innerText = this.score;
+        this.gameOverScreen.classList.add("active");
+    }
+
+    restart() {
+        const bodies = [...this.Composite.allBodies(this.engine.world)];
+        bodies.forEach(body => {
+            if (body.label === "fruit") {
+                this.Composite.remove(this.engine.world, body);
+            }
+        });
+
+        this.score = 0;
+        this.scoreEl.innerText = "0";
+        this.particles = [];
+        this.popTexts = [];
+        this.fruitsToMerge = [];
+        this.deadTimerStart = null;
+        this.currentFruitIndex = this.getRandomFruitIndex();
+        this.nextFruitIndex = this.getRandomFruitIndex();
+        this.isReadyToDrop = true;
+        this.isGameOver = false;
+
+        this.gameOverScreen.classList.remove("active");
+    }
+
+    draw() {
+        this.ctx.clearRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+        this.ctx.fillStyle = "#161616";
+        this.ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
+
+        // 警告線の描画
+        this.ctx.save();
+        this.ctx.strokeStyle = this.deadTimerStart ? `rgba(255, 71, 87, ${0.4 + Math.sin(Date.now() / 100) * 0.4})` : "rgba(255, 255, 255, 0.15)";
+        this.ctx.lineWidth = this.deadTimerStart ? 3 : 2;
+        this.ctx.setLineDash([6, 4]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, GAME_CONFIG.DEADLINE_Y);
+        this.ctx.lineTo(GAME_CONFIG.WIDTH, GAME_CONFIG.DEADLINE_Y);
+        this.ctx.stroke();
+        this.ctx.restore();
+
+        // 落下ガイドライン
+        if (this.isReadyToDrop && !this.isGameOver) {
+            this.ctx.save();
+            this.ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+            this.ctx.lineWidth = 1.5;
+            this.ctx.setLineDash([4, 4]);
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.currentX, GAME_CONFIG.DROP_Y);
+            this.ctx.lineTo(this.currentX, GAME_CONFIG.HEIGHT);
+            this.ctx.stroke();
+            this.ctx.restore();
+
+            this.drawFruitVisual(this.currentX, GAME_CONFIG.DROP_Y, 0, this.currentFruitIndex, this.ctx);
+        }
+
+        // フルーツの描画
+        const bodies = this.Composite.allBodies(this.engine.world);
+        bodies.forEach(body => {
+            if (body.label === "fruit" && !body.isDead) {
+                this.drawFruitVisual(body.position.x, body.position.y, body.angle, body.fruitIndex, this.ctx);
+            }
+        });
+
+        // パーティクル
+        this.particles.forEach((p) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.1; 
+            p.opacity = p.life / 30;
+            p.life--;
+
+            this.ctx.save();
+            this.ctx.globalAlpha = p.opacity;
+            this.ctx.fillStyle = p.color;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+        });
+        this.particles = this.particles.filter(p => p.life > 0);
+
+        // テキストポップアップ
+        this.popTexts.forEach((t) => {
+            t.y -= 0.8;
+            t.opacity = t.life / 40;
+            t.life--;
+
+            this.ctx.save();
+            this.ctx.globalAlpha = t.opacity;
+            this.ctx.fillStyle = "#ffd32a";
+            this.ctx.font = "bold 16px 'Helvetica Neue', Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText(t.text, t.x, t.y);
+            this.ctx.restore();
+        });
+        this.popTexts = this.popTexts.filter(t => t.life > 0);
+
+        this.drawNextPanel();
+    }
+
+    drawFruitVisual(x, y, angle, index, context) {
+        const def = FRUIT_DEFINITIONS[index];
+        const r = def.radius;
+
+        context.save();
+        context.translate(x, y);
+        context.rotate(angle);
+
+        const grad = context.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.1, 0, 0, r);
+        grad.addColorStop(0, def.colors[1]); 
+        grad.addColorStop(0.8, def.colors[0]);
+        grad.addColorStop(1, this.shadeColor(def.colors[0], -20)); 
+
+        context.fillStyle = grad;
+        context.shadowColor = "rgba(0, 0, 0, 0.15)";
+        context.shadowBlur = 6;
+        context.shadowOffsetY = 3;
+        
+        context.beginPath();
+        context.arc(0, 0, r, 0, Math.PI * 2);
+        context.fill();
+        context.shadowColor = "transparent"; 
+
+        if (def.feature === "strawberry") {
+            context.fillStyle = "rgba(255, 255, 255, 0.4)";
+            for (let j = -r * 0.5; j < r * 0.5; j += 7) {
+                for (let k = -r * 0.5; k < r * 0.5; k += 7) {
+                    if (j*j + k*k < r*r * 0.5) {
+                        context.fillRect(j + (k%14?2:0), k, 1.5, 2.5);
+                    }
+                }
+            }
+        } else if (def.feature === "pineapple") {
+            context.save();
+            context.beginPath();
+            context.arc(0, 0, r, 0, Math.PI * 2);
+            context.clip();
+            context.strokeStyle = "rgba(0,0,0,0.08)";
+            context.lineWidth = 2;
+            for (let i = -r; i < r; i += 12) {
+                context.moveTo(i, -r); context.lineTo(i + r * 2, r);
+                context.moveTo(i, r); context.lineTo(i + r * 2, -r);
+            }
+            context.stroke();
+            context.restore();
+        } else if (def.feature === "melon") {
+            context.save();
+            context.beginPath();
+            context.arc(0, 0, r, 0, Math.PI * 2);
+            context.clip();
+            context.strokeStyle = "rgba(255,255,255,0.25)";
+            context.lineWidth = 1.5;
+            context.beginPath();
+            for(let i=0; i<3; i++) {
+                context.arc(-r*0.5 + i*10, 0, r*0.8, 0, Math.PI*2, true);
+                context.arc(r*0.5 - i*10, 0, r*0.8, 0, Math.PI*2, false);
+            }
+            context.stroke();
+            context.restore();
+        } else if (def.feature === "watermelon") {
+            context.save();
+            context.beginPath();
+            context.arc(0, 0, r, 0, Math.PI * 2);
+            context.clip();
+            context.fillStyle = "#1b8a43";
+            for (let i = -5; i <= 5; i++) {
+                context.beginPath();
+                context.ellipse(i * (r * 0.35), 0, r * 0.1, r, 0.1 * i, 0, Math.PI * 2);
+                context.fill();
+            }
+            context.restore();
+        }
+
+        context.fillStyle = "rgba(255, 255, 255, 0.22)";
+        context.beginPath();
+        context.ellipse(-r * 0.3, -r * 0.3, r * 0.2, r * 0.1, Math.PI / 4, 0, Math.PI * 2);
+        context.fill();
+
+        const faceScale = Math.max(0.4, r / 60);
+        context.save();
+        context.scale(faceScale, faceScale);
+        context.fillStyle = "#2c3e50"; 
+
+        const eyeSpacing = 16;
+        const eyeY = -4;
+        const eyeRadius = 3.5;
+
+        if (def.feature === "cherry" || def.feature === "strawberry") {
+            context.beginPath();
+            context.arc(-eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
+            context.arc(eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
+            context.fill();
+            context.fillStyle = "#fff";
+            context.beginPath();
+            context.arc(-eyeSpacing - 1, eyeY - 1, 1, 0, Math.PI * 2);
+            context.arc(eyeSpacing - 1, eyeY - 1, 1, 0, Math.PI * 2);
+            context.fill();
+        } else if (def.feature === "watermelon") {
+            context.strokeStyle = "#111";
+            context.lineWidth = 3;
+            context.lineCap = "round";
+            context.beginPath();
+            context.arc(-eyeSpacing, eyeY, 4, Math.PI, 0, false);
+            context.stroke();
+            context.beginPath();
+            context.arc(eyeSpacing, eyeY, 4, Math.PI, 0, false);
+            context.stroke();
+        } else {
+            context.beginPath();
+            context.arc(-eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
+            context.arc(eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
+            context.fill();
+        }
+
+        context.fillStyle = "#2c3e50";
+        context.beginPath();
+        if (index % 3 === 0) {
+            context.arc(0, 4, 4, 0, Math.PI, false);
+        } else if (index % 3 === 1) {
+            context.strokeStyle = "#2c3e50";
+            context.lineWidth = 2.5;
+            context.lineCap = "round";
+            context.arc(0, 2, 5, 0.1, Math.PI - 0.1, false);
+            context.stroke();
+        } else {
+            context.arc(0, 4, 2.5, 0, Math.PI * 2);
+        }
+        context.fill();
+
+        context.fillStyle = "rgba(255, 107, 129, 0.4)";
+        context.beginPath();
+        context.arc(-eyeSpacing - 5, eyeY + 5, 4, 0, Math.PI * 2);
+        context.arc(eyeSpacing + 5, eyeY + 5, 4, 0, Math.PI * 2);
+        context.fill();
+
+        context.restore(); 
+        context.restore(); 
+    }
+
+    drawNextPanel() {
+        this.nextCtx.clearRect(0, 0, 120, 120);
+        this.nextCtx.fillStyle = "#111";
+        this.nextCtx.fillRect(0, 0, 120, 120);
+        this.drawFruitVisual(60, 60, 0, this.nextFruitIndex, this.nextCtx);
+    }
+
+    shadeColor(color, percent) {
+        let num = parseInt(color.replace("#",""), 16),
+        amt = Math.round(2.55 * percent),
+        R = (num >> 16) + amt,
+        G = (num >> 8 & 0x00FF) + amt,
+        B = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+    }
+
+    loop() {
+        this.processMerges();
+        if (!this.isGameOver) this.checkGameOver();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
+}
+
+// 認証完了後にゲームインスタンスを開始させるトリガー
+new AuthManager((authenticatedUser) => {
+    new SuikaGame(authenticatedUser);
+});
+</script>
+</body>
+</html>
