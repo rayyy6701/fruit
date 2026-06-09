@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suika Casual Puzzle - Premium Edition</title>
+    <title>Suika Casual Puzzle - Premium OTP Edition</title>
     <style>
         :root {
             --bg-color: #1a1a1a;
@@ -11,6 +11,7 @@
             --text-color: #ffffff;
             --accent-color: #ff4757;
             --success-color: #2ed573;
+            --info-color: #54a0ff;
         }
 
         * {
@@ -29,9 +30,29 @@
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
+            position: relative;
         }
 
-        /* --- 認証画面 (ログイン/登録) --- */
+        /* --- 擬似メール通知ポップアップ (テスト用) --- */
+        #mock-email-toast {
+            position: fixed;
+            top: 20px;
+            right: -350px;
+            width: 320px;
+            background: #2f3542;
+            border-left: 5px solid var(--info-color);
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 1000;
+            transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: #fff;
+        }
+        #mock-email-toast.show { right: 20px; }
+        .toast-title { font-weight: bold; font-size: 13px; color: var(--info-color); margin-bottom: 5px;}
+        .toast-body { font-size: 12px; line-height: 1.4; color: #ced6e0; user-select: text !important;}
+
+        /* --- 認証画面 (ログイン/登録/コード認証) --- */
         #auth-overlay {
             position: fixed;
             top: 0;
@@ -58,7 +79,7 @@
         }
 
         .auth-card h2 {
-            font-size: 28px;
+            font-size: 26px;
             margin-bottom: 5px;
             letter-spacing: 1px;
         }
@@ -67,6 +88,7 @@
             font-size: 13px;
             color: #888;
             margin-bottom: 25px;
+            line-height: 1.4;
         }
 
         .input-group {
@@ -95,9 +117,8 @@
             transition: border-color 0.2s;
         }
 
-        .input-group input:focus {
-            border-color: var(--accent-color);
-        }
+        .input-group input:focus { border-color: var(--accent-color); }
+        .input-group input::placeholder { color: #555; }
 
         .auth-btn {
             width: 100%;
@@ -131,8 +152,9 @@
         #auth-error {
             color: #ff4757;
             font-size: 13px;
-            margin-top: 10px;
+            margin-top: 12px;
             min-height: 18px;
+            line-height: 1.4;
         }
 
         /* --- ゲームメイン画面 --- */
@@ -148,10 +170,7 @@
             transition: opacity 0.5s ease;
         }
 
-        #game-container.show {
-            opacity: 1;
-        }
-
+        #game-container.show { opacity: 1; }
         .canvas-wrapper {
             position: relative;
             width: 450px;
@@ -162,10 +181,7 @@
             border: 4px solid #333;
         }
 
-        canvas {
-            display: block;
-        }
-
+        canvas { display: block; }
         .sidebar {
             display: flex;
             flex-direction: column;
@@ -182,10 +198,7 @@
             margin-bottom: 15px;
         }
 
-        .ui-user-box {
-            border-color: var(--success-color);
-        }
-
+        .ui-user-box { border-color: var(--success-color); }
         .ui-label {
             font-size: 12px;
             text-transform: uppercase;
@@ -201,11 +214,12 @@
         }
 
         #username-display {
-            font-size: 18px;
+            font-size: 14px;
             color: var(--success-color);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            user-select: text !important;
         }
 
         .logout-link {
@@ -243,16 +257,8 @@
             backdrop-filter: blur(4px);
         }
 
-        #game-over-screen.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        #game-over-screen h2 {
-            font-size: 36px;
-            color: var(--accent-color);
-            margin-bottom: 10px;
-        }
+        #game-over-screen.active { opacity: 1; pointer-events: auto; }
+        #game-over-screen h2 { font-size: 36px; color: var(--accent-color); margin-bottom: 10px; }
 
         .restart-btn {
             background: var(--accent-color);
@@ -267,29 +273,25 @@
             box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
             transition: transform 0.2s, background 0.2s;
         }
-
-        .restart-btn:hover {
-            background: #ff6b81;
-            transform: scale(1.05);
-        }
+        .restart-btn:hover { background: #ff6b81; transform: scale(1.05); }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body>
+
+<div id="mock-email-toast">
+    <div class="toast-title">✉️ システムメール受信 (模擬窓)</div>
+    <div class="toast-body" id="mock-email-content">確認コードの送信待ちです...</div>
+</div>
 
 <div id="auth-overlay">
     <div class="auth-card">
         <h2 id="auth-title">LOGIN</h2>
-        <div id="auth-subtitle" class="auth-subtitle">Welcome back! Please login.</div>
+        <div id="auth-subtitle" class="auth-subtitle">登録済みのメールアドレスでログインしてください。</div>
         
-        <div class="input-group">
-            <label for="auth-username">Username</label>
-            <input type="text" id="auth-username" autocomplete="username" placeholder="ユーザー名を入力">
-        </div>
-        <div class="input-group">
-            <label for="auth-password">Password</label>
-            <input type="password" id="auth-password" autocomplete="current-password" placeholder="パスワードを入力">
-        </div>
+        <div id="auth-inputs-container">
+            </div>
 
         <button class="auth-btn" id="auth-submit-btn">SIGN IN</button>
         
@@ -303,7 +305,6 @@
 <div id="game-container">
     <div class="canvas-wrapper">
         <canvas id="game-canvas" width="450" height="650"></canvas>
-        
         <div id="game-over-screen">
             <h2>GAME OVER</h2>
             <div class="ui-label">Final Score</div>
@@ -315,8 +316,8 @@
     <div class="sidebar">
         <div>
             <div class="ui-box ui-user-box">
-                <div class="ui-label">Player</div>
-                <div id="username-display" class="ui-value">Guest</div>
+                <div class="ui-label">Account</div>
+                <div id="username-display" class="ui-value" style="font-size:12px;">-</div>
                 <span class="logout-link" id="logout-btn">ログアウト</span>
             </div>
             <div class="ui-box">
@@ -328,7 +329,6 @@
                 <div id="best-score" class="ui-value">0</div>
             </div>
         </div>
-        
         <div class="ui-box">
             <div class="ui-label">Next</div>
             <canvas id="next-canvas" width="120" height="120"></canvas>
@@ -337,6 +337,18 @@
 </div>
 
 <script>
+// --- EmailJSで本当のメールアドレスへ送信したい設定 (任意) ---
+// 登録して使う場合は以下の空欄にキーを入力するだけでリアルメール送信に切り替わります
+const EMAILJS_CONFIG = {
+    PUBLIC_KEY: "",     // 例: "user_xxxxxxxxxxxx"
+    SERVICE_ID: "",     // 例: "service_xxxxxxx"
+    TEMPLATE_ID: ""     // 例: "template_xxxxxxx"
+};
+
+if (EMAILJS_CONFIG.PUBLIC_KEY) {
+    emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
+}
+
 // --- ゲーム設定と定数定義 ---
 const GAME_CONFIG = {
     WIDTH: 450,
@@ -362,7 +374,6 @@ const FRUIT_DEFINITIONS = [
     { name: "スイカ",     radius: 126, score: 66,  colors: ["#26de81", "#20bf6b"], feature: "watermelon" }
 ];
 
-// --- セキュリティ用簡易ハッシュ関数 (文字列をハッシュ化) ---
 function cyrb128(str) {
     let h1 = 1779033703, h2 = 3024733165, h3 = 3362453663, h4 = 502494325;
     for (let i = 0, k; i < str.length; i++) {
@@ -379,33 +390,101 @@ function cyrb128(str) {
     return [(h1^h2^h3^h4)>>>0, (h2^h1)>>>0, (h3^h1)>>>0, (h4^h1)>>>0].join('-');
 }
 
-// --- 認証システム・マネージャー ---
+// --- 認証システム・マネージャー (OTPコード認証拡張版) ---
 class AuthManager {
     constructor(onSuccessCallback) {
         this.onSuccess = onSuccessCallback;
-        this.isLoginMode = true; // true: ログイン, false: 新規登録
+        
+        // モード管理: 'login' | 'register' | 'otp_verify'
+        this.mode = 'login'; 
+
+        // テンポラリ登録データ
+        this.pendingUser = { email: "", password: "", otp: "" };
 
         this.overlay = document.getElementById("auth-overlay");
         this.title = document.getElementById("auth-title");
         this.subtitle = document.getElementById("auth-subtitle");
-        this.usernameInput = document.getElementById("auth-username");
-        this.passwordInput = document.getElementById("auth-password");
+        this.inputsContainer = document.getElementById("auth-inputs-container");
         this.submitBtn = document.getElementById("auth-submit-btn");
-        this.toggleBtn = document.getElementById("auth-toggle-btn");
         this.toggleWrapper = document.getElementById("auth-toggle-wrapper");
         this.errorEl = document.getElementById("auth-error");
 
+        this.renderInputs();
         this.initEvents();
         this.checkAutoLogin();
     }
 
     initEvents() {
-        this.toggleBtn.addEventListener("click", () => this.toggleMode());
         this.submitBtn.addEventListener("click", () => this.handleSubmit());
-        // Enterキーで送信対応
-        const checkEnter = (e) => { if(e.key === "Enter") this.handleSubmit(); };
-        this.usernameInput.addEventListener("keydown", checkEnter);
-        this.passwordInput.addEventListener("keydown", checkEnter);
+        this.inputsContainer.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") this.handleSubmit();
+        });
+    }
+
+    // モードに応じたフォームUIを動的生成
+    renderInputs() {
+        this.inputsContainer.innerHTML = "";
+        this.errorEl.innerText = "";
+
+        if (this.mode === 'login') {
+            this.title.innerText = "LOGIN";
+            this.subtitle.innerText = "登録済みのメールアドレスでログインしてください。";
+            this.submitBtn.innerText = "SIGN IN";
+            this.toggleWrapper.innerHTML = `アカウントをお持ちでないですか？ <span id="auth-toggle-btn">新規登録</span>`;
+            
+            this.inputsContainer.innerHTML = `
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="auth-email" placeholder="example@domain.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="auth-password" placeholder="パスワードを入力">
+                </div>
+            `;
+            document.getElementById("auth-toggle-btn").addEventListener("click", () => {
+                this.mode = 'register';
+                this.renderInputs();
+            });
+
+        } else if (this.mode === 'register') {
+            this.title.innerText = "REGISTER";
+            this.subtitle.innerText = "メールアドレス宛てに送信される確認コードで登録を完了します。";
+            this.submitBtn.innerText = "SEND VERIFICATION CODE";
+            this.toggleWrapper.innerHTML = `既にアカウントをお持ちですか？ <span id="auth-toggle-btn">ログイン</span>`;
+            
+            this.inputsContainer.innerHTML = `
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="auth-email" placeholder="example@domain.com">
+                </div>
+                <div class="input-group">
+                    <label>Create Password</label>
+                    <input type="password" id="auth-password" placeholder="新しく設定するパスワード">
+                </div>
+            `;
+            document.getElementById("auth-toggle-btn").addEventListener("click", () => {
+                this.mode = 'login';
+                this.renderInputs();
+            });
+
+        } else if (this.mode === 'otp_verify') {
+            this.title.innerText = "VERIFY EMAIL";
+            this.subtitle.innerText = `${this.pendingUser.email}<br>宛てに確認コードを送信しました。入力してください。`;
+            this.submitBtn.innerText = "COMPLETE REGISTRATION";
+            this.toggleWrapper.innerHTML = `<span id="auth-back-btn">← メールアドレス入力に戻る</span>`;
+            
+            this.inputsContainer.innerHTML = `
+                <div class="input-group">
+                    <label>Verification Code (6-digits)</label>
+                    <input type="text" id="auth-otp" placeholder="6桁のコードを入力" maxlength="6" style="text-align:center; font-size:20px; letter-spacing:4px;">
+                </div>
+            `;
+            document.getElementById("auth-back-btn").addEventListener("click", () => {
+                this.mode = 'register';
+                this.renderInputs();
+            });
+        }
     }
 
     checkAutoLogin() {
@@ -415,68 +494,112 @@ class AuthManager {
         }
     }
 
-    toggleMode() {
-        this.isLoginMode = !this.isLoginMode;
-        this.errorEl.innerText = "";
-        this.passwordInput.value = "";
-        
-        if (this.isLoginMode) {
-            this.title.innerText = "LOGIN";
-            this.subtitle.innerText = "Welcome back! Please login.";
-            this.submitBtn.innerText = "SIGN IN";
-            this.toggleWrapper.innerHTML = `アカウントをお持ちでないですか？ <span id="auth-toggle-btn">新規登録</span>`;
-        } else {
-            this.title.innerText = "REGISTER";
-            this.subtitle.innerText = "Create a new account for saving scores.";
-            this.submitBtn.innerText = "SIGN UP";
-            this.toggleWrapper.innerHTML = `既にアカウントをお持ちですか？ <span id="auth-toggle-btn">ログイン</span>`;
-        }
-        // 内側を入れ替えたため再バインド
-        this.toggleBtn = document.getElementById("auth-toggle-btn");
-        this.toggleBtn.addEventListener("click", () => this.toggleMode());
-    }
-
     handleSubmit() {
-        const username = this.usernameInput.value.trim();
-        const password = this.passwordInput.value.trim();
         this.errorEl.innerText = "";
 
-        if (!username || !password) {
-            this.errorEl.innerText = "全てのフィールドを入力してください。";
-            return;
-        }
+        if (this.mode === 'login') {
+            const email = document.getElementById("auth-email").value.trim();
+            const password = document.getElementById("auth-password").value.trim();
+            if (!email || !password) return this.showError("全てのフィールドを入力してください。");
 
-        let users = JSON.parse(localStorage.getItem("suika_users")) || {};
-        const hashedPassword = cyrb128(password);
-
-        if (this.isLoginMode) {
-            // ログイン処理
-            if (users[username] && users[username].password === hashedPassword) {
-                this.completeAuth(username);
+            let users = JSON.parse(localStorage.getItem("suika_users")) || {};
+            if (users[email] && users[email].password === cyrb128(password)) {
+                this.completeAuth(email);
             } else {
-                this.errorEl.innerText = "ユーザー名またはパスワードが違います。";
+                this.showError("メールアドレスまたはパスワードが違います。");
             }
-        } else {
-            // 新規登録処理
-            if (users[username]) {
-                this.errorEl.innerText = "このユーザー名は既に存在します。";
-            } else {
-                users[username] = {
-                    password: hashedPassword,
+
+        } else if (this.mode === 'register') {
+            const email = document.getElementById("auth-email").value.trim();
+            const password = document.getElementById("auth-password").value.trim();
+            if (!email || !password) return this.showError("全てのフィールドを入力してください。");
+            if (!this.validateEmail(email)) return this.showError("有効なメールアドレスを入力してください。");
+
+            let users = JSON.parse(localStorage.getItem("suika_users")) || {};
+            if (users[email]) return this.showError("このメールアドレスは既に登録されています。");
+
+            // 6桁のランダム確認コード生成
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            this.pendingUser.email = email;
+            this.pendingUser.password = cyrb128(password);
+            this.pendingUser.otp = otpCode;
+
+            this.sendEmail(email, otpCode);
+
+        } else if (this.mode === 'otp_verify') {
+            const enteredOtp = document.getElementById("auth-otp").value.trim();
+            if (!enteredOtp) return this.showError("確認コードを入力してください。");
+
+            if (enteredOtp === this.pendingUser.otp) {
+                // コード一致: LocalStorageにアカウントを正式コミット
+                let users = JSON.parse(localStorage.getItem("suika_users")) || {};
+                users[this.pendingUser.email] = {
+                    password: this.pendingUser.password,
                     bestScore: 0
                 };
                 localStorage.setItem("suika_users", JSON.stringify(users));
-                this.completeAuth(username);
+                this.completeAuth(this.pendingUser.email);
+            } else {
+                this.showError("確認コードが正しくありません。もう一度ご確認ください。");
             }
         }
     }
 
-    completeAuth(username) {
-        sessionStorage.setItem("suika_current_user", username);
+    // メール送信メソッド (EmailJS対応/モックフォールバック)
+    sendEmail(email, code) {
+        this.submitBtn.innerText = "SENDING...";
+        this.submitBtn.disabled = true;
+
+        if (EMAILJS_CONFIG.PUBLIC_KEY && EMAILJS_CONFIG.SERVICE_ID && EMAILJS_CONFIG.TEMPLATE_ID) {
+            // 本物のメール送信APIを実行
+            emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
+                to_email: email,
+                otp_code: code
+            }).then(() => {
+                this.proceedToOtp();
+            }).catch((err) => {
+                console.error("EmailJS Error:", err);
+                this.showMockToast(email, code); // 失敗時はモックにフォールバック
+                this.proceedToOtp();
+            });
+        } else {
+            // API未設定の場合は右上の擬似トースト通知にコードを表示
+            setTimeout(() => {
+                this.showMockToast(email, code);
+                this.proceedToOtp();
+            }, 800);
+        }
+    }
+
+    proceedToOtp() {
+        this.submitBtn.disabled = false;
+        this.mode = 'otp_verify';
+        this.renderInputs();
+    }
+
+    showMockToast(email, code) {
+        const toast = document.getElementById("mock-email-toast");
+        const content = document.getElementById("mock-email-content");
+        content.innerHTML = `To: <b>${email}</b><br>本文: パズルゲームの登録確認コードは <span style="color:#ffd32a; font-weight:bold; font-size:14px; background:#111; padding:2px 6px; border-radius:4px;">${code}</span> です。`;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 12000); // 12秒後に自動で隠す
+    }
+
+    validateEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    showError(msg) {
+        this.errorEl.innerHTML = msg;
+    }
+
+    completeAuth(email) {
+        sessionStorage.setItem("suika_current_user", email);
         this.overlay.style.opacity = "0";
         setTimeout(() => {
             this.overlay.style.display = "none";
-            this.onSuccess(username);
+            this.onSuccess(email);
         }, 400);
     }
 
@@ -491,6 +614,7 @@ class SuikaGame {
     constructor(username) {
         this.username = username;
         document.getElementById("username-display").innerText = username;
+        document.getElementById("username-display").title = username; // ホバーでフル表示
 
         this.Engine = Matter.Engine;
         this.Runner = Matter.Runner;
@@ -510,8 +634,6 @@ class SuikaGame {
         this.gameOverScreen = document.getElementById("game-over-screen");
 
         this.score = 0;
-        
-        // アカウントに紐づくハイスコアを取得
         this.loadUserBestScore();
 
         this.currentFruitIndex = this.getRandomFruitIndex();
@@ -535,11 +657,7 @@ class SuikaGame {
 
     loadUserBestScore() {
         let users = JSON.parse(localStorage.getItem("suika_users")) || {};
-        if (users[this.username]) {
-            this.bestScore = users[this.username].bestScore || 0;
-        } else {
-            this.bestScore = 0;
-        }
+        this.bestScore = (users[this.username]) ? (users[this.username].bestScore || 0) : 0;
         this.bestScoreEl.innerText = this.bestScore;
     }
 
@@ -604,9 +722,7 @@ class SuikaGame {
                             m.bodyA.id === bodyA.id || m.bodyB.id === bodyA.id ||
                             m.bodyA.id === bodyB.id || m.bodyB.id === bodyB.id
                         );
-                        if (!alreadyQueued) {
-                            this.fruitsToMerge.push({ bodyA, bodyB });
-                        }
+                        if (!alreadyQueued) this.fruitsToMerge.push({ bodyA, bodyB });
                     }
                 }
             });
@@ -626,10 +742,7 @@ class SuikaGame {
         const def = FRUIT_DEFINITIONS[index];
 
         const fruit = this.Bodies.circle(this.currentX, GAME_CONFIG.DROP_Y, def.radius, {
-            restitution: 0.1, 
-            friction: 0.1,    
-            density: 0.001,
-            label: "fruit"
+            restitution: 0.1, friction: 0.1, density: 0.001, label: "fruit"
         });
 
         fruit.fruitIndex = index;
@@ -676,17 +789,13 @@ class SuikaGame {
             if (nextIndex < FRUIT_DEFINITIONS.length) {
                 const nextDef = FRUIT_DEFINITIONS[nextIndex];
                 const newFruit = this.Bodies.circle(midX, midY, nextDef.radius, {
-                    restitution: 0.1,
-                    friction: 0.1,
-                    density: 0.001,
-                    label: "fruit"
+                    restitution: 0.1, friction: 0.1, density: 0.001, label: "fruit"
                 });
                 newFruit.fruitIndex = nextIndex;
                 newFruit.isDead = false;
                 newFruit.spawnTime = Date.now();
 
                 this.Body.setVelocity(newFruit, { x: (Math.random() - 0.5) * 2, y: -2 });
-
                 this.Composite.add(this.engine.world, newFruit);
             }
         });
@@ -698,7 +807,7 @@ class SuikaGame {
         if (this.score > this.bestScore) {
             this.bestScore = this.score;
             this.bestScoreEl.innerText = this.bestScore;
-            this.saveUserBestScore(); // ハイスコアをユーザーデータに書き込み
+            this.saveUserBestScore();
         }
         this.popTexts.push({ x, y, text: `+${points}`, opacity: 1, life: 40 });
     }
@@ -712,9 +821,7 @@ class SuikaGame {
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
                 radius: Math.random() * 4 + 2,
-                color,
-                opacity: 1,
-                life: 30
+                color, opacity: 1, life: 30
             });
         }
     }
@@ -753,9 +860,7 @@ class SuikaGame {
     restart() {
         const bodies = [...this.Composite.allBodies(this.engine.world)];
         bodies.forEach(body => {
-            if (body.label === "fruit") {
-                this.Composite.remove(this.engine.world, body);
-            }
+            if (body.label === "fruit") this.Composite.remove(this.engine.world, body);
         });
 
         this.score = 0;
@@ -768,7 +873,6 @@ class SuikaGame {
         this.nextFruitIndex = this.getRandomFruitIndex();
         this.isReadyToDrop = true;
         this.isGameOver = false;
-
         this.gameOverScreen.classList.remove("active");
     }
 
@@ -777,7 +881,7 @@ class SuikaGame {
         this.ctx.fillStyle = "#161616";
         this.ctx.fillRect(0, 0, GAME_CONFIG.WIDTH, GAME_CONFIG.HEIGHT);
 
-        // 警告線の描画
+        // 警告線
         this.ctx.save();
         this.ctx.strokeStyle = this.deadTimerStart ? `rgba(255, 71, 87, ${0.4 + Math.sin(Date.now() / 100) * 0.4})` : "rgba(255, 255, 255, 0.15)";
         this.ctx.lineWidth = this.deadTimerStart ? 3 : 2;
@@ -788,7 +892,7 @@ class SuikaGame {
         this.ctx.stroke();
         this.ctx.restore();
 
-        // 落下ガイドライン
+        // ガイドライン
         if (this.isReadyToDrop && !this.isGameOver) {
             this.ctx.save();
             this.ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
@@ -799,11 +903,10 @@ class SuikaGame {
             this.ctx.lineTo(this.currentX, GAME_CONFIG.HEIGHT);
             this.ctx.stroke();
             this.ctx.restore();
-
             this.drawFruitVisual(this.currentX, GAME_CONFIG.DROP_Y, 0, this.currentFruitIndex, this.ctx);
         }
 
-        // フルーツの描画
+        // フルーツ描画
         const bodies = this.Composite.allBodies(this.engine.world);
         bodies.forEach(body => {
             if (body.label === "fruit" && !body.isDead) {
@@ -811,37 +914,19 @@ class SuikaGame {
             }
         });
 
-        // パーティクル
+        // エフェクト更新
         this.particles.forEach((p) => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.1; 
-            p.opacity = p.life / 30;
-            p.life--;
-
-            this.ctx.save();
-            this.ctx.globalAlpha = p.opacity;
-            this.ctx.fillStyle = p.color;
-            this.ctx.beginPath();
-            this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.restore();
+            p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.opacity = p.life / 30; p.life--;
+            this.ctx.save(); this.ctx.globalAlpha = p.opacity; this.ctx.fillStyle = p.color;
+            this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); this.ctx.fill(); this.ctx.restore();
         });
         this.particles = this.particles.filter(p => p.life > 0);
 
-        // テキストポップアップ
         this.popTexts.forEach((t) => {
-            t.y -= 0.8;
-            t.opacity = t.life / 40;
-            t.life--;
-
-            this.ctx.save();
-            this.ctx.globalAlpha = t.opacity;
-            this.ctx.fillStyle = "#ffd32a";
-            this.ctx.font = "bold 16px 'Helvetica Neue', Arial";
-            this.ctx.textAlign = "center";
-            this.ctx.fillText(t.text, t.x, t.y);
-            this.ctx.restore();
+            t.y -= 0.8; t.opacity = t.life / 40; t.life--;
+            this.ctx.save(); this.ctx.globalAlpha = t.opacity; this.ctx.fillStyle = "#ffd32a";
+            this.ctx.font = "bold 16px 'Helvetica Neue', Arial"; this.ctx.textAlign = "center";
+            this.ctx.fillText(t.text, t.x, t.y); this.ctx.restore();
         });
         this.popTexts = this.popTexts.filter(t => t.life > 0);
 
@@ -851,155 +936,83 @@ class SuikaGame {
     drawFruitVisual(x, y, angle, index, context) {
         const def = FRUIT_DEFINITIONS[index];
         const r = def.radius;
-
-        context.save();
-        context.translate(x, y);
-        context.rotate(angle);
+        context.save(); context.translate(x, y); context.rotate(angle);
 
         const grad = context.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.1, 0, 0, r);
-        grad.addColorStop(0, def.colors[1]); 
-        grad.addColorStop(0.8, def.colors[0]);
+        grad.addColorStop(0, def.colors[1]); grad.addColorStop(0.8, def.colors[0]);
         grad.addColorStop(1, this.shadeColor(def.colors[0], -20)); 
-
         context.fillStyle = grad;
-        context.shadowColor = "rgba(0, 0, 0, 0.15)";
-        context.shadowBlur = 6;
-        context.shadowOffsetY = 3;
-        
-        context.beginPath();
-        context.arc(0, 0, r, 0, Math.PI * 2);
-        context.fill();
-        context.shadowColor = "transparent"; 
+        context.shadowColor = "rgba(0, 0, 0, 0.15)"; context.shadowBlur = 6; context.shadowOffsetY = 3;
+        context.beginPath(); context.arc(0, 0, r, 0, Math.PI * 2); context.fill(); context.shadowColor = "transparent"; 
 
         if (def.feature === "strawberry") {
             context.fillStyle = "rgba(255, 255, 255, 0.4)";
             for (let j = -r * 0.5; j < r * 0.5; j += 7) {
                 for (let k = -r * 0.5; k < r * 0.5; k += 7) {
-                    if (j*j + k*k < r*r * 0.5) {
-                        context.fillRect(j + (k%14?2:0), k, 1.5, 2.5);
-                    }
+                    if (j*j + k*k < r*r * 0.5) context.fillRect(j + (k%14?2:0), k, 1.5, 2.5);
                 }
             }
         } else if (def.feature === "pineapple") {
-            context.save();
-            context.beginPath();
-            context.arc(0, 0, r, 0, Math.PI * 2);
-            context.clip();
-            context.strokeStyle = "rgba(0,0,0,0.08)";
-            context.lineWidth = 2;
+            context.save(); context.beginPath(); context.arc(0, 0, r, 0, Math.PI * 2); context.clip();
+            context.strokeStyle = "rgba(0,0,0,0.08)"; context.lineWidth = 2;
             for (let i = -r; i < r; i += 12) {
                 context.moveTo(i, -r); context.lineTo(i + r * 2, r);
                 context.moveTo(i, r); context.lineTo(i + r * 2, -r);
             }
-            context.stroke();
-            context.restore();
+            context.stroke(); context.restore();
         } else if (def.feature === "melon") {
-            context.save();
-            context.beginPath();
-            context.arc(0, 0, r, 0, Math.PI * 2);
-            context.clip();
-            context.strokeStyle = "rgba(255,255,255,0.25)";
-            context.lineWidth = 1.5;
-            context.beginPath();
+            context.save(); context.beginPath(); context.arc(0, 0, r, 0, Math.PI * 2); context.clip();
+            context.strokeStyle = "rgba(255,255,255,0.25)"; context.lineWidth = 1.5; context.beginPath();
             for(let i=0; i<3; i++) {
                 context.arc(-r*0.5 + i*10, 0, r*0.8, 0, Math.PI*2, true);
                 context.arc(r*0.5 - i*10, 0, r*0.8, 0, Math.PI*2, false);
             }
-            context.stroke();
-            context.restore();
+            context.stroke(); context.restore();
         } else if (def.feature === "watermelon") {
-            context.save();
-            context.beginPath();
-            context.arc(0, 0, r, 0, Math.PI * 2);
-            context.clip();
+            context.save(); context.beginPath(); context.arc(0, 0, r, 0, Math.PI * 2); context.clip();
             context.fillStyle = "#1b8a43";
             for (let i = -5; i <= 5; i++) {
-                context.beginPath();
-                context.ellipse(i * (r * 0.35), 0, r * 0.1, r, 0.1 * i, 0, Math.PI * 2);
-                context.fill();
+                context.beginPath(); context.ellipse(i * (r * 0.35), 0, r * 0.1, r, 0.1 * i, 0, Math.PI * 2); context.fill();
             }
             context.restore();
         }
 
-        context.fillStyle = "rgba(255, 255, 255, 0.22)";
-        context.beginPath();
-        context.ellipse(-r * 0.3, -r * 0.3, r * 0.2, r * 0.1, Math.PI / 4, 0, Math.PI * 2);
-        context.fill();
+        context.fillStyle = "rgba(255, 255, 255, 0.22)"; context.beginPath(); context.ellipse(-r * 0.3, -r * 0.3, r * 0.2, r * 0.1, Math.PI / 4, 0, Math.PI * 2); context.fill();
 
         const faceScale = Math.max(0.4, r / 60);
-        context.save();
-        context.scale(faceScale, faceScale);
-        context.fillStyle = "#2c3e50"; 
-
-        const eyeSpacing = 16;
-        const eyeY = -4;
-        const eyeRadius = 3.5;
+        context.save(); context.scale(faceScale, faceScale); context.fillStyle = "#2c3e50"; 
+        const eyeSpacing = 16, eyeY = -4, eyeRadius = 3.5;
 
         if (def.feature === "cherry" || def.feature === "strawberry") {
-            context.beginPath();
-            context.arc(-eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
-            context.arc(eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
-            context.fill();
-            context.fillStyle = "#fff";
-            context.beginPath();
-            context.arc(-eyeSpacing - 1, eyeY - 1, 1, 0, Math.PI * 2);
-            context.arc(eyeSpacing - 1, eyeY - 1, 1, 0, Math.PI * 2);
-            context.fill();
+            context.beginPath(); context.arc(-eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2); context.arc(eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2); context.fill();
+            context.fillStyle = "#fff"; context.beginPath(); context.arc(-eyeSpacing - 1, eyeY - 1, 1, 0, Math.PI * 2); context.arc(eyeSpacing - 1, eyeY - 1, 1, 0, Math.PI * 2); context.fill();
         } else if (def.feature === "watermelon") {
-            context.strokeStyle = "#111";
-            context.lineWidth = 3;
-            context.lineCap = "round";
-            context.beginPath();
-            context.arc(-eyeSpacing, eyeY, 4, Math.PI, 0, false);
-            context.stroke();
-            context.beginPath();
-            context.arc(eyeSpacing, eyeY, 4, Math.PI, 0, false);
-            context.stroke();
+            context.strokeStyle = "#111"; context.lineWidth = 3; context.lineCap = "round";
+            context.beginPath(); context.arc(-eyeSpacing, eyeY, 4, Math.PI, 0, false); context.stroke();
+            context.beginPath(); context.arc(eyeSpacing, eyeY, 4, Math.PI, 0, false); context.stroke();
         } else {
-            context.beginPath();
-            context.arc(-eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
-            context.arc(eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2);
-            context.fill();
+            context.beginPath(); context.arc(-eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2); context.arc(eyeSpacing, eyeY, eyeRadius, 0, Math.PI * 2); context.fill();
         }
 
-        context.fillStyle = "#2c3e50";
-        context.beginPath();
-        if (index % 3 === 0) {
-            context.arc(0, 4, 4, 0, Math.PI, false);
-        } else if (index % 3 === 1) {
-            context.strokeStyle = "#2c3e50";
-            context.lineWidth = 2.5;
-            context.lineCap = "round";
-            context.arc(0, 2, 5, 0.1, Math.PI - 0.1, false);
-            context.stroke();
-        } else {
-            context.arc(0, 4, 2.5, 0, Math.PI * 2);
-        }
+        context.fillStyle = "#2c3e50"; context.beginPath();
+        if (index % 3 === 0) context.arc(0, 4, 4, 0, Math.PI, false);
+        else if (index % 3 === 1) {
+            context.strokeStyle = "#2c3e50"; context.lineWidth = 2.5; context.lineCap = "round";
+            context.arc(0, 2, 5, 0.1, Math.PI - 0.1, false); context.stroke();
+        } else context.arc(0, 4, 2.5, 0, Math.PI * 2);
         context.fill();
 
-        context.fillStyle = "rgba(255, 107, 129, 0.4)";
-        context.beginPath();
-        context.arc(-eyeSpacing - 5, eyeY + 5, 4, 0, Math.PI * 2);
-        context.arc(eyeSpacing + 5, eyeY + 5, 4, 0, Math.PI * 2);
-        context.fill();
-
-        context.restore(); 
-        context.restore(); 
+        context.fillStyle = "rgba(255, 107, 129, 0.4)"; context.beginPath(); context.arc(-eyeSpacing - 5, eyeY + 5, 4, 0, Math.PI * 2); context.arc(eyeSpacing + 5, eyeY + 5, 4, 0, Math.PI * 2); context.fill();
+        context.restore(); context.restore(); 
     }
 
     drawNextPanel() {
-        this.nextCtx.clearRect(0, 0, 120, 120);
-        this.nextCtx.fillStyle = "#111";
-        this.nextCtx.fillRect(0, 0, 120, 120);
+        this.nextCtx.clearRect(0, 0, 120, 120); this.nextCtx.fillStyle = "#111"; this.nextCtx.fillRect(0, 0, 120, 120);
         this.drawFruitVisual(60, 60, 0, this.nextFruitIndex, this.nextCtx);
     }
 
     shadeColor(color, percent) {
-        let num = parseInt(color.replace("#",""), 16),
-        amt = Math.round(2.55 * percent),
-        R = (num >> 16) + amt,
-        G = (num >> 8 & 0x00FF) + amt,
-        B = (num & 0x0000FF) + amt;
+        let num = parseInt(color.replace("#",""), 16), amt = Math.round(2.55 * percent), R = (num >> 16) + amt, G = (num >> 8 & 0x00FF) + amt, B = (num & 0x0000FF) + amt;
         return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
     }
 
@@ -1011,7 +1024,7 @@ class SuikaGame {
     }
 }
 
-// 認証完了後にゲームインスタンスを開始させるトリガー
+// 認証システム初期化起動
 new AuthManager((authenticatedUser) => {
     new SuikaGame(authenticatedUser);
 });
