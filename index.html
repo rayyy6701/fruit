@@ -33,25 +33,6 @@
             position: relative;
         }
 
-        /* --- 擬似メール通知ポップアップ (テスト用) --- */
-        #mock-email-toast {
-            position: fixed;
-            top: 20px;
-            right: -350px;
-            width: 320px;
-            background: #2f3542;
-            border-left: 5px solid var(--info-color);
-            padding: 15px;
-            border-radius: 4px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            z-index: 1000;
-            transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            color: #fff;
-        }
-        #mock-email-toast.show { right: 20px; }
-        .toast-title { font-weight: bold; font-size: 13px; color: var(--info-color); margin-bottom: 5px;}
-        .toast-body { font-size: 12px; line-height: 1.4; color: #ced6e0; user-select: text !important;}
-
         /* --- 認証画面 (ログイン/登録/コード認証) --- */
         #auth-overlay {
             position: fixed;
@@ -214,7 +195,7 @@
         }
 
         #username-display {
-            font-size: 14px;
+            font-size: 12px;
             color: var(--success-color);
             overflow: hidden;
             text-overflow: ellipsis;
@@ -280,11 +261,6 @@
 </head>
 <body>
 
-<div id="mock-email-toast">
-    <div class="toast-title">✉️ システムメール受信 (模擬窓)</div>
-    <div class="toast-body" id="mock-email-content">確認コードの送信待ちです...</div>
-</div>
-
 <div id="auth-overlay">
     <div class="auth-card">
         <h2 id="auth-title">LOGIN</h2>
@@ -317,7 +293,7 @@
         <div>
             <div class="ui-box ui-user-box">
                 <div class="ui-label">Account</div>
-                <div id="username-display" class="ui-value" style="font-size:12px;">-</div>
+                <div id="username-display" class="ui-value">-</div>
                 <span class="logout-link" id="logout-btn">ログアウト</span>
             </div>
             <div class="ui-box">
@@ -337,12 +313,11 @@
 </div>
 
 <script>
-// --- EmailJSで本当のメールアドレスへ送信したい設定 (任意) ---
-// 登録して使う場合は以下の空欄にキーを入力するだけでリアルメール送信に切り替わります
+// --- EmailJS キー設定 ---
 const EMAILJS_CONFIG = {
-    PUBLIC_KEY: "",     // 例: "DPvgnwbxsHrBrCbQr"
-    SERVICE_ID: "",     // 例: "service_btl6txb"
-    TEMPLATE_ID: ""     // 例: "template_67jxxf9"
+    PUBLIC_KEY: "",     // DPvgnwbxsHrBrCbQr
+    SERVICE_ID: "",     // service_btl6txb
+    TEMPLATE_ID: ""     // template_67jxxf9
 };
 
 if (EMAILJS_CONFIG.PUBLIC_KEY) {
@@ -390,15 +365,11 @@ function cyrb128(str) {
     return [(h1^h2^h3^h4)>>>0, (h2^h1)>>>0, (h3^h1)>>>0, (h4^h1)>>>0].join('-');
 }
 
-// --- 認証システム・マネージャー (OTPコード認証拡張版) ---
+// --- 認証システム・マネージャー ---
 class AuthManager {
     constructor(onSuccessCallback) {
         this.onSuccess = onSuccessCallback;
-        
-        // モード管理: 'login' | 'register' | 'otp_verify'
         this.mode = 'login'; 
-
-        // テンポラリ登録データ
         this.pendingUser = { email: "", password: "", otp: "" };
 
         this.overlay = document.getElementById("auth-overlay");
@@ -421,7 +392,6 @@ class AuthManager {
         });
     }
 
-    // モードに応じたフォームUIを動的生成
     renderInputs() {
         this.inputsContainer.innerHTML = "";
         this.errorEl.innerText = "";
@@ -518,7 +488,6 @@ class AuthManager {
             let users = JSON.parse(localStorage.getItem("suika_users")) || {};
             if (users[email]) return this.showError("このメールアドレスは既に登録されています。");
 
-            // 6桁のランダム確認コード生成
             const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
             
             this.pendingUser.email = email;
@@ -532,7 +501,6 @@ class AuthManager {
             if (!enteredOtp) return this.showError("確認コードを入力してください。");
 
             if (enteredOtp === this.pendingUser.otp) {
-                // コード一致: LocalStorageにアカウントを正式コミット
                 let users = JSON.parse(localStorage.getItem("suika_users")) || {};
                 users[this.pendingUser.email] = {
                     password: this.pendingUser.password,
@@ -546,13 +514,11 @@ class AuthManager {
         }
     }
 
-    // メール送信メソッド (EmailJS対応/モックフォールバック)
     sendEmail(email, code) {
         this.submitBtn.innerText = "SENDING...";
         this.submitBtn.disabled = true;
 
         if (EMAILJS_CONFIG.PUBLIC_KEY && EMAILJS_CONFIG.SERVICE_ID && EMAILJS_CONFIG.TEMPLATE_ID) {
-            // 本物のメール送信APIを実行
             emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
                 to_email: email,
                 otp_code: code
@@ -560,15 +526,14 @@ class AuthManager {
                 this.proceedToOtp();
             }).catch((err) => {
                 console.error("EmailJS Error:", err);
-                this.showMockToast(email, code); // 失敗時はモックにフォールバック
-                this.proceedToOtp();
+                this.showError("メールの送信に失敗しました。キー設定を確認してください。");
+                this.submitBtn.innerText = "SEND VERIFICATION CODE";
+                this.submitBtn.disabled = false;
             });
         } else {
-            // API未設定の場合は右上の擬似トースト通知にコードを表示
-            setTimeout(() => {
-                this.showMockToast(email, code);
-                this.proceedToOtp();
-            }, 800);
+            this.showError("<span style='color:#ffa502;'>EmailJSのキーが設定されていません。<br>コードの一番上にある EMAILJS_CONFIG にキーを設定してください。</span>");
+            this.submitBtn.innerText = "SEND VERIFICATION CODE";
+            this.submitBtn.disabled = false;
         }
     }
 
@@ -576,14 +541,6 @@ class AuthManager {
         this.submitBtn.disabled = false;
         this.mode = 'otp_verify';
         this.renderInputs();
-    }
-
-    showMockToast(email, code) {
-        const toast = document.getElementById("mock-email-toast");
-        const content = document.getElementById("mock-email-content");
-        content.innerHTML = `To: <b>${email}</b><br>本文: パズルゲームの登録確認コードは <span style="color:#ffd32a; font-weight:bold; font-size:14px; background:#111; padding:2px 6px; border-radius:4px;">${code}</span> です。`;
-        toast.classList.add("show");
-        setTimeout(() => toast.classList.remove("show"), 12000); // 12秒後に自動で隠す
     }
 
     validateEmail(email) {
@@ -614,7 +571,7 @@ class SuikaGame {
     constructor(username) {
         this.username = username;
         document.getElementById("username-display").innerText = username;
-        document.getElementById("username-display").title = username; // ホバーでフル表示
+        document.getElementById("username-display").title = username; 
 
         this.Engine = Matter.Engine;
         this.Runner = Matter.Runner;
